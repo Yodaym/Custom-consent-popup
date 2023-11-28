@@ -1,6 +1,4 @@
-class PopupCss {
-    constructor() {}
-
+class ConsentWindowStyles {
     static get CSSCONTENT_BASIC() {
         return `
             #custom-consent-popup-overlay {
@@ -102,4 +100,4 @@ class PopupCss {
     }
 }
 
-export default PopupCss;
+export default ConsentWindowStyles;

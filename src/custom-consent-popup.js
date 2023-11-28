@@ -1,4 +1,4 @@
-import PopupCss from './popup-css';
+import ConsentWindowStyles from './consent-window-styles';
 /**
  * This class `CustomConsentPopup` is responsible for creating and managing a customizable confirmation banner.
  */
@@ -10,18 +10,14 @@ class CustomConsentPopup {
    *
    * @property {boolean} show - Banner state: shown if true, hidden if false.
    * @property {boolean} backgroundBlock - If true, the banner overlay is blocked; if false, it's interactive.
-   * @property {number} backgroundBlockOpacity - Opacity intensity of the background (0 to 1) when backgroundBlock is true.
    * @property {array} backgroundBlockColor - Color of the background (zero element - red, first - green, second - blue)
    * when backgroundBlock is true
-   * @property {string} position - A predefined stylesheet determining the banner's positioning and sizing.
-   *                              Possible values: 'CustomConsentPopup.bannerPosition1', 'CustomConsentPopup.bannerPosition2',
-   *                              'CustomConsentPopup.bannerPosition3'.
-   * @property {number|boolean} expirationTimer - Time in seconds to automatically change 'show' from false to true
+   * @property {number} position - A predefined stylesheet determining the banner's positioning and sizing.
+   *                              Possible values: 1, 2, 3.
+   * @property {number|boolean} consentExpirationTime - Time in seconds to automatically change 'show' from false to true
    *                                              after it's set to false by clicking the positive button. False to disable.
-   * @property {number|boolean} expirationDate - The timestamp from which 'show' becomes true. Automatically calculated,
-   *                                             should not be set manually.
-   * @property {string} bannerHeaderText - Text displayed in the banner's textSpan (inside an <h3> element).
-   * @property {string} bannerText - Text displayed in the banner's textSpan (inside a <p> element).
+   * @property {string} bannerHeaderText - Text displayed in the banner's header.
+   * @property {string} bannerText - Text displayed in the banner.
    * @property {string} positiveButtonText - Text for the positive (confirmation) button.
    * @property {string} negativeButtonText - Text for the negative (decline) button.
    * @property {boolean} hideBannerOnNegativeClick - Whether to hide the banner when the negative button is clicked.
@@ -30,22 +26,25 @@ class CustomConsentPopup {
   static defaultOptions = {
     show: false,
     backgroundBlock: false,
-    backgroundBlockOpacity: 1,
-    backgroundBlockColor: [200, 131, 0],
-    position: PopupCss.BANNER_POSITION_1,
+    backgroundBlockColor: "rgba(0, 0, 0, 0.7)",
+    position: 1,
     hideBannerOnOverlayClick: false,
-    expirationTimer: false,
-    bannerHeaderText: 'Cookies & Privacy',
-    bannerText: 'bannerText',
+    consentExpirationTime: null,
+    bannerHeaderHTML: '<h3>Cookies & Privacy</h3>',
+    bannerBodyHTML: '<p>bannerText<p>',
     positiveButtonText: 'Confirm',
     negativeButtonText: 'Decline',
     hideBannerOnNegativeClick: true,
     localStorageObjectName: 'custom-consent-popup-timer',
-    onPositiveButtonClickСallback: function() {
-      console.log('Positive button clicked');
+    blockScroll: true,
+    removeAllContentOnNegativeClick: false,
+    onPositiveButtonClickСallback: function(object) {
     },
-    onNegativeButtonClickCallback: function() {
-      console.log('Negative button clicked');
+    onNegativeButtonClickCallback: function(object) {
+    },
+    onPreviousConsentFoundCallback: function(object) {
+    },
+    onBannerRenderedCallback: function(object) {
     },
   };
     /**
@@ -58,35 +57,100 @@ class CustomConsentPopup {
    * @param {object} [options] - An object with user-defined options. It may include a subset of the possible options.
    */
   constructor(options) {
-    this.options = Object.assign(CustomConsentPopup.defaultOptions, options);
-    console.log(this.options);
+    this.options = Object.assign({}, CustomConsentPopup.defaultOptions, options);
   }
 
   /**
-   * This function is intended to be overridden with custom behavior when the positive button is clicked.
-   */
-  onPositiveButtonClick() {
-    this.options.onPositiveButtonClickСallback();
+     * Handles the behavior when the positive (confirmation) button is clicked.
+     * Sets the consent date, updates the local storage, hides the banner, and calls the positive button click callback.
+     * @param {event} event - The event object associated with the click event.
+     * @private
+     */
+  _processPositiveButtonClick(event) {
+    if (event.target.id === 'custom-consent-popup-positive-button') {
+      this.consentDate = this.currentDateAndTime()
+      localStorage.setItem(this.options.localStorageObjectName, this.consentDate);
+      this.bannerOverlay.style.display = 'none';
+      this.options.onPositiveButtonClickСallback(this);
+      this.unblockScroll();
+    }
   }
   /**
- * This function is intended to be overridden with custom behavior when the negative button is clicked.
- */
-  onNegativeButtonClick() {
-    this.options.onNegativeButtonClickCallback();
+     * Handles the behavior when the negative (decline) button is clicked.
+     * Hides the banner if configured to do so, and calls the negative button click callback.
+     * @param {event} event - The event object associated with the click event.
+     * @private
+     */
+  _processNegativeButtonClick(event) {
+    if (event.target.id === 'custom-consent-popup-negative-button') {
+      if (this.options.hideBannerOnNegativeClick === true) {
+        this.bannerOverlay.style.display = 'none';
+        this.options.onNegativeButtonClickCallback(this);
+        this.unblockScroll();
+      }
+      if (this.options.removeAllContentOnNegativeClick) {
+        document.body.innerHTML = ''
+        console.log(document.body.innerHTML);
+      }
+    }
+  }
+  /**
+     * Processes click events on the banner overlay.
+     * Checks the conditions for hiding the banner when the overlay is clicked and executes the appropriate actions.
+     * @param {event} event - The event object associated with the click event.
+     * @private
+     */
+  _processOverlayClick(event) {
+    if (event.target === this.bannerOverlay) {
+      if (this.options.backgroundBlock === true && this.options.hideBannerOnOverlayClick === true) {
+        this.bannerOverlay.style.display = 'none';
+        this.unblockScroll();
+      }
+    }
+  }
+  /**
+     * Restores the ability to scroll the page if it was previously blocked by the banner.
+     * @private
+     */
+  unblockScroll() {
+    if (this.options.blockScroll) {
+      document.body.style.overflow = 'visible';
+    }
   }
   /**
      * createBlobLinkCss merges basic css of a banner and optional into a Blob,
      * Creates a link which allows this Blob to be refered as stylesheet
      * @param {string} cssContentOptional - A string containing a piece of css optionaly chosen by user
      * @return {HTMLLinkElement}A link element that can be appended to a document to apply the combined CSS styles.
+     * @private
      */
   static createBlobLinkCss(cssContentOptional) {
-    const blob = new Blob([PopupCss.CSSCONTENT_BASIC, cssContentOptional], {type: 'text/css'});
+    const blob = new Blob([ConsentWindowStyles.CSSCONTENT_BASIC, cssContentOptional], {type: 'text/css'});
     const url = URL.createObjectURL(blob);
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = url;
     return link;
+  }
+  /**
+   * @param {string} number
+   * @returns {string}
+   * @private
+   */
+
+  static hideBanner() {
+    this.bannerOverlay.style.display = 'none';
+    if (this.options.blockScroll){
+      this.unblockScroll()
+    }
+  }
+  extractPositionCss(number) {
+    const cssGetMethodName = 'BANNER_POSITION_' + number;
+    if (typeof ConsentWindowStyles[cssGetMethodName] === 'string') {
+      return ConsentWindowStyles[cssGetMethodName];
+    } else {
+      console.log('CustomConsentPopup.choosePosition parameter is wrong');
+    }
   }
   /**
    * Creates and appends an HTML element to a specified parent element based on given parameters.
@@ -96,6 +160,7 @@ class CustomConsentPopup {
    * @param {HTMLElement} parent - The parent element to which the newly created element will be appended.
    * @param {string} [innerHTML=null] - The inner HTML content of the created element. Optional.
    * @return {HTMLElement} The newly created and appended HTML element.
+   * @private
    */
   static createAndAppendElement(type, attributes, parent, innerHTML = null) {
     const element = document.createElement(type);
@@ -107,92 +172,79 @@ class CustomConsentPopup {
     return element;
   }
   /**
- * Calculates the current date and time in seconds.
- * This method converts the current date and time to a Unix timestamp in seconds.
- *
- * @return {number} The current date and time as a Unix timestamp in seconds.
- */
-  currentDateAndTimeInSeconds() {
+     * Calculates and returns the current date and time as a Unix timestamp in seconds.
+     * This is used for managing the consent expiration logic.
+     * @return {number} The current date and time as a Unix timestamp in seconds.
+     * @private
+     */
+  currentDateAndTime() {
     const currentDateAndTime = new Date;
-    const currentDateAndTimeInSeconds = Math.floor(currentDateAndTime.getTime()/1000);
-    return currentDateAndTimeInSeconds;
+    return Math.floor(currentDateAndTime.getTime());
   }
   /**
- * Manages the background block behavior of the banner.
- * This method sets the pointer events and background color based on the options.
- * If `backgroundBlock` is false, pointer events are disabled, otherwise, the background color is set based on `backgroundBlockColor` and `backgroundBlockOpacity`.
- */
+     * Manages the background blocking behavior of the banner.
+     * Sets pointer events and background color based on the banner's configuration options.
+     * @private
+     */
   backgroundBlockManager() {
     if (!this.options.backgroundBlock) {
       this.bannerOverlay.style.pointerEvents = 'none';
       this.confirmationBanner.style.pointerEvents = 'auto';
     } else {
-      if (this.options.backgroundBlockOpacity || this.options.backgroundBlockColor) {
-        this.bannerOverlay.style.backgroundColor = `rgba(${this.options.backgroundBlockColor[0]},
-        ${this.options.backgroundBlockColor[1]},${this.options.backgroundBlockColor[2]}, ${this.options.backgroundBlockOpacity})`;
+      if (this.options.backgroundBlockColor) {
+        this.bannerOverlay.style.backgroundColor = this.options.backgroundBlockColor
+        console.log(this.bannerOverlay.style.backgroundColor);
       }
+    }
+    if (this.options.blockScroll) {
+      document.body.style.overflow = 'hidden';
     }
   }
   /**
- * Sets up event listeners for click events on the banner.
- * This method handles the functionality when the overlay, positive, or negative buttons are clicked.
- * It includes hiding the banner and invoking respective callback functions for positive and negative button clicks.
- */
-  onClickProcessor() {
+     * Attaches event listeners for handling clicks on the positive and negative buttons, as well as the banner overlay.
+     * @private
+     */
+  _assignButtonEvents() {
     this.bannerOverlay.addEventListener('click', (event) => {
-      if (event.target === this.bannerOverlay) {
-        if (this.options.backgroundBlock === true && this.options.hideBannerOnOverlayClick === true) {
-          this.bannerOverlay.style.display = 'none';
-        }
-      }
-      if (event.target.id === 'custom-consent-popup-negative-button') {
-        if (this.options.hideBannerOnNegativeClick === true) {
-          this.bannerOverlay.style.display = 'none';
-          console.log('1');
-          this.onNegativeButtonClick();
-        }
-      }
-
-      if (event.target.id === 'custom-consent-popup-positive-button') {
-        this.consentDate = this.currentDateAndTimeInSeconds();
-        localStorage.setItem(this.options.localStorageObjectName, this.consentDate);
-        console.log('2');
-        this.bannerOverlay.style.display = 'none';
-        this.onPositiveButtonClick();
-      }
+      this._processOverlayClick(event);
+      this._processNegativeButtonClick(event);
+      this._processPositiveButtonClick(event);
     });
   }
   /**
- * Determines whether the banner should be rendered based on the consent date and expiration timer.
- * It retrieves the old consent date from local storage and compares it with the current time and expiration timer to decide if the banner should be shown.
- * If the banner needs to be shown, it calls the `render` method.
- */
+     * Determines whether the banner should be displayed based on the stored consent date and the configured expiration timer.
+     * This method helps in managing the display logic of the banner based on user's previous interactions.
+     * @return {boolean} Returns true if the banner should be rendered, otherwise false.
+     */
   shouldItBeRendered() {
-    let oldConsentDate = localStorage.getItem(this.options.localStorageObjectName) || 0;
-    oldConsentDate = (oldConsentDate && oldConsentDate !== 0) ? parseInt(oldConsentDate) : 0;
-    this.options.show = (oldConsentDate + this.options.expirationTimer <= this.currentDateAndTimeInSeconds());
-    if (this.options.show) {
-      this.render();
+    this.consentDate = parseInt(localStorage.getItem(this.options.localStorageObjectName) || '0');
+    if (this.options.consentExpirationTime) {
+      return this.show = ((this.consentDate + this.options.consentExpirationTime*1000) <= this.currentDateAndTime());
+    } else {
+      return this.show = false;
     }
+    // what is consentExpirationTime is null, false and others shit
   }
   /**
-   * After DOMcontent is loaded initilizes a new CustomConsentPopup instance based on options provided by user.
-   * And then calls a render function on the newly created object
-   * @param {object} options - An object with settings provided by user
-   */
+     * Initializes a new instance of `CustomConsentPopup` with the provided options.
+     * If the banner needs to be rendered, it calls the `render` method; otherwise, it invokes the callback for previously found consent.
+     * @param {object} options - Configuration options provided by the user.
+     * @static
+     */
   static init(options) {
     const banner = new CustomConsentPopup(options);
-    banner.shouldItBeRendered();
+    if (banner.shouldItBeRendered()) {
+      banner.render();
+    } else {
+      banner.options.onPreviousConsentFoundCallback(this);
+    }
   }
 
   /**
-   * Renders the confirmation banner based on options defined by a user and state object which is stored in localstorage.
-   * Firstly, this method retrieves the 'CustomConsentPopup' from local storage to determine banner's behaviour.
-   * Some of CustomConsentPopup.options get updated.
-   * Note: ways of banner's behaviour are desribed right above defaultOptions constant
-   * Then it creates banner HTML elements and appends them to the document body.
-   * Event listeners are attached to positive and negative buttons to the banner for user interaction.
-  */
+     * Renders the confirmation banner based on the user-defined options and the state object stored in local storage.
+     * It creates the necessary HTML elements for the banner and appends them to the document body.
+     * Also, it attaches event listeners for user interactions with the banner.
+     */
   render() {
     this.bannerOverlay = document.createElement('div');
     this.bannerOverlay.id = 'custom-consent-popup-overlay';
@@ -204,18 +256,18 @@ class CustomConsentPopup {
     this.backgroundBlockManager();
 
     const textSpan = this.constructor.createAndAppendElement('span', {id: 'custom-consent-popup-text-span'}, this.confirmationBanner);
-    this.constructor.createAndAppendElement('h3', {}, textSpan, this.options.bannerHeaderText);
-    this.constructor.createAndAppendElement('p', {}, textSpan, this.options.bannerText);
-    const buttonsSpan = this.constructor.createAndAppendElement('span', {id: 'cu4stom-consent-popup-buttons-span'}, this.confirmationBanner);
+    textSpan.innerHTML = `${this.options.bannerHeaderHTML}${this.options.bannerBodyHTML}`
+    const buttonsSpan = this.constructor.createAndAppendElement('span', {id: 'custom-consent-popup-buttons-span'}, this.confirmationBanner);
     this.constructor.createAndAppendElement('button', {id: 'custom-consent-popup-positive-button', class: 'custom-consent-popup-buttons'}, buttonsSpan, this.options.positiveButtonText);
     this.constructor.createAndAppendElement('button', {id: 'custom-consent-popup-negative-button', class: 'custom-consent-popup-buttons'}, buttonsSpan, this.options.negativeButtonText);
     this.bannerWrapper.appendChild(this.confirmationBanner);
     this.bannerOverlay.appendChild(this.bannerWrapper);
     document.body.appendChild(this.bannerOverlay);
-    const linkElement = this.constructor.createBlobLinkCss(this.options.position);
+    const linkElement = this.constructor.createBlobLinkCss(this.extractPositionCss(this.options.position));
     document.head.appendChild(linkElement);
+    this.options.onBannerRenderedCallback();
 
-    this.onClickProcessor();
+    this._assignButtonEvents();
   }
 }
 

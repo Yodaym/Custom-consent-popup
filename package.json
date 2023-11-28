@@ -1,0 +1,30 @@
+{
+    "name": "custom-consent-popup",
+    "version": "0.9.0",
+    "description": "A customizable modal window for managing user consent, with various configuration options.",
+    "main": "index.js",
+    "author": {
+        "name": "Greg Kelner",
+        "url": "https://github.com/Yodaym"
+      },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Yodaym/custom-consent-popup.git"
+    },
+    "license": "MIT",
+    "keywords": [
+        "modal",
+        "consent",
+        "cookies",
+        "javascript",
+        "browser",
+        "regulations"
+    ],
+    "bugs": {
+        "url": "https://github.com/Yodaym/custom-consent-popup/issues"
+    },
+    "homepage": "https://github.com/Yodaym/custom-consent-popup#readme",
+    "devDependencies": {
+        "eslint": "^8.54.0"
+    }
+}
