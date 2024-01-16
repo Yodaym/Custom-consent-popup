@@ -18,72 +18,6 @@ body{
     display: flex;
     justify-content: center;
 }
-/*
-#confirmation-banner-overlay{
-    position: absolute;
-    min-height: 100%;
-    width: 100%;
-    top: 0;
-}
-#confirmation-banner{
-    background-color: var(--main_color);
-    border-radius: 5px;
-    z-index: 1000;
-    width: 448px;
-    height: 256px;
-    padding: 16px;
-    text-align: center;
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    border: 2px solid var(--accent_color);
-}
-#confirmation-banner > *{
-    text-align: center;
-}
-#text_span{
-    height: 70%;
-    display: flex;
-    flex-direction: column;
-}
-#confirmation-banner h3{
-    margin: 0;
-    font-size: 24px;
-    color: rgb(62,109,236);
-}
-#confirmation-banner p{
-    margin: 16px 0 16px 0;
-    text-align: left;
-    font-family: sans-serif;
-    font-size: 16px;
-    color: rgb(0,0,0);
-}
-#buttons_span{
-    margin: 0;
-    display: flex;
-    height: 30%;
-    justify-content: center;
-}
-.confirmation-banner-buttons{
-    font-family:sans-serif;
-    width: 30%;
-    height: 40px;
-    border-radius: 5px;
-    margin: 0 16px 0 16px;
-    cursor: pointer;
-}
-#positive-button{
-    background-color: var(--accent_color);
-    border-color: var(--accent_color);
-    color: var(--main_color);
-}
-#negative-button{
-    background-color: var(--main_color);
-    border-color: var(--accent_color);
-    color: var(--accent_color);
-}
-*/
 .container {
     width: 80%;
     min-height: 100%;
@@ -114,4 +48,18 @@ body{
 .container p {
     line-height: 1.5; 
     color: rgb(50, 50, 50); 
+}
+.test_buttons {
+    background-color: #4CAF50; 
+    color: white; 
+    padding: 15px 32px; 
+    text-align: center; 
+    text-decoration: none; 
+    display: inline-block; 
+    font-size: 16px; 
+    margin: 4px 2px; 
+    cursor: pointer; 
+    border: none; 
+    border-radius: 8px; 
+    transition-duration: 0.4s; 
 }
